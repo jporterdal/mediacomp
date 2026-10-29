@@ -159,9 +159,9 @@ Alternative considered: `imageio.v3.imwrite` on a stacked array, as in the hando
 - **Thonny's `sys.executable` might not be the interpreter that has mediaComp.**
   - Mitigation: it is the backend interpreter, which is the one with mediaComp, since mediaComp imported successfully. Covered on the manual checklist.
 - **The player window may open behind Thonny without focus.**
-  - Mitigation: manual check. If it is a problem, request focus on Windows after the window is created (SDL hint or `SetForegroundWindow` through ctypes).
+  - Mitigation: manual check. If it is a problem, request focus on Windows after the window is created (SDL hint or `SetForegroundWindow` through ctypes). The manual checklist (1.2) found the window opens in front of Thonny with keyboard focus, so no focus request is made.
 - **MJPEG AVI might not play in a particular Windows player build.**
-  - Mitigation: manual check on Windows 10 and 11. The fallback is `mpeg4` (MPEG-4 Part 2), which Windows has decoded natively since Windows 7.
+  - Mitigation: manual check on Windows 10 and 11. The fallback is `mpeg4` (MPEG-4 Part 2), which Windows has decoded natively since Windows 7. The manual checklist (6.2) found MJPEG AVI plays in the built-in player with no extra codecs, so the fallback is not used.
 - **Stale frames:** `writeFramesToDirectory` overwrites `frame0001.png`… but leaves higher-numbered files from an earlier, longer run, and a later `makeMovie(dir)` would pick them up.
   - Mitigation: document this in the student README. A warning could be added later without changing the spec.
 - **Snapshot memory:** very long or very large movies use a lot of RAM (D4).
@@ -189,5 +189,7 @@ Phase 2 (a separate future change):
 
 ## Open Questions
 
-- Whether MJPEG AVI plays in the Windows built-in player on the machines students use. This is answered by the manual checklist; switching to the `mpeg4` fallback changes only D7.
-- Whether the player window needs an explicit focus request on Windows. This is answered by the manual checklist and changes only D6.
+None. Both questions were resolved by the manual Windows checklist:
+
+- Whether MJPEG AVI plays in the Windows built-in player: it does, without installing codecs (checklist 6.2). D7 keeps MJPEG; the `mpeg4` fallback was not needed.
+- Whether the player window needs an explicit focus request on Windows: it does not. The window opens in front of Thonny and takes keyboard input without a click (checklist 1.2). D6 is unchanged.

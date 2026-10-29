@@ -75,8 +75,8 @@ These cover every scenario of the playback "Clean shutdown" requirement.
 | 3.2 | **Stop/Restart with a non-blocking window.** Change the call to `playMovie(movie, block=False)` and run. | `done` is printed while the window keeps playing. |
 | 3.3 | With that window still open, click **Stop** (Stop/Restart backend). | The window closes within a couple of seconds. The process list is empty. |
 | 3.4 | **Re-running with a window open.** Run the non-blocking script again, and while its window is open, press **F5** (run again). | The old window closes when Thonny restarts the backend, and one new window opens. The process list shows exactly one player. |
-| 3.5 | **Script ends normally.** Add `import time; time.sleep(3)` after `print("done")` in the non-blocking script and run it. | The window plays for about 3 seconds, then closes when the script ends and Thonny's backend finishes. (If Thonny keeps the backend alive after the script, the window stays until Stop; record which.) |
-| 3.6 | **Temporary frames cleaned up.** After 1.3, 2.7, 3.1, 3.3 and 3.4, run the temp-folder command. | No `mediaCompMovie-*` folders remain. |
+| 3.5 | **Script ends normally.** Add `import time; time.sleep(3)` after `print("done")` in the non-blocking script and run it. | Thonny keeps its backend running after the script ends, so the window stays open (playing) until you click **Stop**, which closes it. This is correct: the window lives as long as the Python process that started it. |
+| 3.6 | **Temporary frames cleaned up.** Close every player window (click **Stop** in Thonny), then in PowerShell run `Get-ChildItem $env:TEMP -Filter 'mediaCompMovie-*'`. Leftovers from earlier checks build up in that folder, so one empty result at this point covers 1.3, 2.7, 3.1, 3.3 and 3.4. | The command prints nothing. If folders are listed, delete them, then repeat those checks one at a time and run the command after each one to find which check leaves them. |
 | 3.7 | Run two players at once: `playMovie(movie, block=False)` twice. | Two windows play at the same time. Stop closes both. |
 
 ## 4. `show()` and `playMovie` together
@@ -102,7 +102,7 @@ Install `imageio` and `imageio-ffmpeg` with **Tools → Manage packages**
 
 | # | Steps | Expected |
 |---|---|---|
-| 6.1 | Replace the last lines with `writeMP4(movie, "anim.mp4")`, `writeAVI(movie, "anim.avi")`, `writeQuicktime(movie, "anim.mov")`. | Three non-empty files are created next to the script. |
+| 6.1 | Replace the last lines with `writeMP4(movie, "anim.mp4")`, `writeAVI(movie, "anim.avi")`, `writeQuicktime(movie, "anim.mov")`. | Three non-empty files are created in the media folder. mediaComp saves the media folder in `~/.mediaCompConfig`, so a folder set by 5.3 or in an earlier Thonny session still applies. Run `showMediaFolder()` to see it. The files are created next to the script only if the media path is empty. |
 | 6.2 | **Playable in Windows' built-in player.** Open each file by double-clicking it (Media Player on Windows 11, Movies & TV on Windows 10). Do not install any codecs. | Each one plays and shows frames 1–20 in order (the rectangle moves down-right, the frame number counts up). Record the AVI result for design.md's AVI codec open question. |
 | 6.3 | Export again with `writeMP4(movie, "anim30.mp4", 30)` and open it. | Plays noticeably faster than `anim.mp4`. |
 | 6.4 | Run `writeMovie(movie, "anim2")`. | `anim2.mp4` is created and plays. |
@@ -112,8 +112,8 @@ Install `imageio` and `imageio-ffmpeg` with **Tools → Manage packages**
 
 | # | Steps | Expected |
 |---|---|---|
-| 7.1 | From a clone of the repo on Windows, with mediaComp installed in editable mode and `contrib/movie/requirements-dev.txt` installed, run `pytest -m windows`. | All Windows tests pass. |
-| 7.2 | Run `pytest`. | Everything passes or is skipped; nothing fails. |
+| 7.1 | In a clone of the repo on Windows, check out the `movies` branch (`git status` must show `On branch movies`; `master` has no movie tests). Then run `pip install -e .`, `pip install -r contrib/movie/requirements-dev.txt` and `pytest -m windows`. | Several tests are selected (not `0 selected`) and all of them pass. |
+| 7.2 | Run `pytest`. | The `tests/movie` tests run as well as `tests/Picture_test.py`, so many more than 2 tests are collected. Everything passes or is skipped; nothing fails. |
 
 ## Results
 
