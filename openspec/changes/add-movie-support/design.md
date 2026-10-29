@@ -9,7 +9,7 @@ See proposal.md for motivation and specs/ for the required behaviour. This secti
   - `Picture.show()` already starts a helper script (`scripts/show.py`) as a subprocess with `sys.executable`, which is a working precedent for the player.
   - Pillow, numpy, pygame-ce and wxPython are already installed with mediaComp.
 - `ConfigManager` (`models/Config.py`) reads and writes `~/.mediaCompConfig` when mediaComp is imported. Its media path defaults to `""`, so `getMediaFolder(name)` returns `name`, a path relative to the current directory.
-- Upstream bug: `makePicture` and `writePictureTo` (`core/image.py`) and `makeSound`/`writeSoundTo` (`core/sound.py`) declare `global mediaFolder` and add it to relative paths, but nothing assigns `mediaFolder`. Relative paths are therefore expected to raise `NameError`. This has been confirmed by reading the code only. The movie code works around it (see D3), and fixing it is out of scope.
+- Upstream bug: `makePicture` and `writePictureTo` (`core/image.py`) and `makeSound`/`writeSoundTo` (`core/sound.py`) declare `global mediaFolder` and add it to relative paths, but nothing assigns `mediaFolder`. Confirmed by running mediaComp 0.4.15 in a fresh temp directory: `makePicture('x.png')` and `writePictureTo(p, 'y.png')` raise `NameError: name 'mediaFolder' is not defined` for any relative path. This happens whether or not the file exists and whether or not a media folder has been set with `setMediaFolder`. Absolute paths work. The movie code works around it (see D3), and fixing it is out of scope.
 - The existing CI workflow runs `pytest` on `windows-latest` for Python 3.10–3.14, with only `pytest` and mediaComp installed. It triggers on pushes and PRs to `master` only.
 
 ## Goals / Non-Goals
@@ -95,6 +95,7 @@ Alternative considered: writing each snapshot to a temp PNG as it is added. That
 - `PYGAME_HIDE_SUPPORT_PROMPT=1` is set in the child's environment.
 - **Liveness:** the parent keeps the write end of the child's stdin open. When the parent exits for any reason (the script ends, Ctrl+C, or Thonny Stop/Restart killing the backend), the OS closes that pipe. The child's reader thread sees EOF and posts a quit event. This works the same way on Windows and Linux, with no PID polling and no `psutil`.
   - `os.kill(pid, 0)` was rejected because on Windows it terminates the target process instead of checking it.
+  - The reader thread uses `os.read(sys.stdin.fileno(), ...)`, not `sys.stdin.buffer.read()`. A daemon thread blocked in the buffered read holds the buffer's lock, and when the window is closed while the parent is still alive, Python 3.13 aborts at shutdown with `Fatal Python error: _enter_buffered_busy`.
 - **Blocking mode:** `proc.wait()` sits inside `try/finally`. On `KeyboardInterrupt` the `finally` block closes stdin, which shuts the child down cleanly. It then calls `terminate()` if the child is still alive after a short timeout, and the interruption propagates to the script.
 - **Non-blocking mode:** `Popen` objects are kept in a module-level list so they are not garbage-collected (that would close stdin and stop the player early). Finished entries are pruned on each call.
 - **Temp files:** each playback writes every frame, whether a path or a snapshot, as a PNG into its own `tempfile.mkdtemp(prefix="mediaCompMovie-")` directory. The player removes that directory when it exits. In blocking mode the parent also removes it after `wait()`, in case the child was killed before it could.
@@ -106,7 +107,7 @@ Alternative considered: writing each snapshot to a temp PNG as it is added. That
   - `pygame.time.Clock().tick(fps)` controls timing.
   - Title: `Movie: frame i of N`, with ` (paused)` added while paused.
   - Keys: space pauses and resumes; left and right step, wrapping around; Escape quits, as does the close button.
-  - `_runPlayer` accepts a `maxFrames` test hook, so headless tests can run the loop without a display, using `SDL_VIDEODRIVER=dummy`.
+  - `_runPlayer` accepts a `maxFrames` test hook, so headless tests can run the loop without a display, using `SDL_VIDEODRIVER=dummy`. An `onTick(tick)` hook lets tests post key events into the running loop. The stdin watcher starts only when the file runs as the `--play` script (`watchStdin=True`), because pytest's `sys.stdin` cannot be read.
 
 Alternatives considered:
 - In-process pygame: blocks with no non-blocking option, clashes with mediaComp's hidden Tk root and wx `show` windows, and Thonny's Stop leaves the window frozen.
