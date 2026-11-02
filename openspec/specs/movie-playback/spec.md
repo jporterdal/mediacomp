@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets students watch their movies in a window from Thonny on Windows, at a chosen speed, with the script either waiting for the window or carrying on, and with the window always closing cleanly.
+Lets students watch their movies in a window from Thonny on Windows, at a fixed 16 frames per second, with the script either waiting for the window or carrying on, and with the window always closing cleanly.
 
 ## Requirements
 
@@ -17,28 +17,20 @@ Lets students watch their movies in a window from Thonny on Windows, at a chosen
 - **WHEN** `playMovie(movie)` is called and the optional export packages are not installed
 - **THEN** the movie plays normally
 
-### Requirement: Playback speed
-Playback SHALL default to 16 frames per second. The second positional argument, `delay`, SHALL set the time each frame is shown, in seconds (Guzdial style). The keyword `framesPerSec` SHALL set frames per second (JES style). Giving both SHALL be an error. A `delay` or `framesPerSec` that is not a positive number SHALL be an error.
+### Requirement: Fixed playback speed
+Playback SHALL always run at 16 frames per second, the JES default. `playMovie` SHALL NOT take a speed argument, positional or keyword: the frame rate of a movie is chosen only when it is written to a video file.
 
-#### Scenario: Default speed
+#### Scenario: Fixed speed
 - **WHEN** `playMovie(movie)` is called
 - **THEN** frames advance at 16 frames per second
 
-#### Scenario: Guzdial delay
-- **WHEN** `playMovie(movie, 0.25)` is called
-- **THEN** each frame is shown for about 0.25 seconds (4 frames per second)
+#### Scenario: Old speed keywords are not accepted
+- **WHEN** `playMovie(movie, framesPerSec=30)` or `playMovie(movie, delay=0.1)` is called
+- **THEN** Python raises a `TypeError` for the unexpected keyword and no window opens
 
-#### Scenario: JES frames per second
-- **WHEN** `playMovie(movie, framesPerSec=30)` is called
-- **THEN** frames advance at 30 frames per second
-
-#### Scenario: Both speeds given
-- **WHEN** `playMovie(movie, 0.1, framesPerSec=30)` is called
-- **THEN** the error convention applies
-
-#### Scenario: Non-positive speed
-- **WHEN** `playMovie(movie, 0)` or `playMovie(movie, framesPerSec=-5)` is called
-- **THEN** the error convention applies
+#### Scenario: Speed is chosen when saving
+- **WHEN** a student wants a movie to run at 30 frames per second
+- **THEN** they pass 30 as the optional last argument of `writeMovie`, `writeMP4`, `writeAVI` or `writeQuicktime`, and the saved video runs at that rate
 
 ### Requirement: Playback input validation
 `playMovie` SHALL apply the error convention, without opening a window, when its first argument is not a movie or the movie has no frames.
@@ -55,35 +47,46 @@ Playback SHALL default to 16 frames per second. The second positional argument, 
 - **WHEN** `playMovie(makeMovie("emptydir"))` is called and `emptydir` holds no image files
 - **THEN** the error convention applies and no window opens
 
-### Requirement: Blocking and non-blocking playback
-By default, `playMovie` SHALL block: it returns only after the playback window is closed. A module-level setting `DEFAULT_PLAY_BLOCKING`, which starts as `True`, SHALL set the default for later calls. Students SHALL be able to change and read it with `setPlayBlocking(flag)` and `getPlayBlocking()`, which work after `from mediaCompMovie import *`, where assigning the name in the student's script would not. `setPlayBlocking` SHALL apply the error convention to a value that is not `True` or `False`. The keyword `block=True` or `block=False` on a single call SHALL override that setting. In non-blocking mode, `playMovie` SHALL return as soon as the window has been started, and the script SHALL carry on while the movie plays.
+### Requirement: Optional blocking argument
+The signature SHALL be `playMovie(movie[, isBlocking])`, with `isBlocking` an optional positional argument that defaults to `False`, matching mediaComp's `play(sound[, isBlocking])`. `isBlocking` SHALL be interpreted as `play()` interprets it: any true value makes the call block, and any false value makes it non-blocking. No value SHALL be rejected. A blocking call SHALL return only after the playback window is closed. A non-blocking call SHALL return as soon as the window has been started, and the script SHALL carry on while the movie plays. There SHALL be no module-level blocking setting and no `setPlayBlocking` or `getPlayBlocking` function.
 
-#### Scenario: Default blocking
+#### Scenario: Default non-blocking
 - **WHEN** a script calls `playMovie(movie)` and then `print("done")`
-- **THEN** `done` is printed only after the playback window is closed
-
-#### Scenario: Per-call non-blocking
-- **WHEN** a script calls `playMovie(movie, block=False)` and then `print("done")`
 - **THEN** `done` is printed while the window is still playing
 
-#### Scenario: Module-level default
-- **WHEN** a script that used `from mediaCompMovie import *` calls `setPlayBlocking(False)` and then `playMovie(movie)`
-- **THEN** the call does not block
-- **AND** `getPlayBlocking()` returns `False`
+#### Scenario: Blocking
+- **WHEN** a script calls `playMovie(movie, True)` and then `print("done")`
+- **THEN** `done` is printed only after the playback window is closed
 
-#### Scenario: Per-call override of the default
-- **WHEN** `setPlayBlocking(False)` has been called and a script calls `playMovie(movie, block=True)`
-- **THEN** that call blocks
+#### Scenario: Truthy value blocks
+- **WHEN** `playMovie(movie, 1)` is called
+- **THEN** the call blocks, as `play(sound, 1)` would
+
+#### Scenario: Falsy value does not block
+- **WHEN** `playMovie(movie, 0)` is called
+- **THEN** the call does not block
+
+#### Scenario: Old Guzdial delay argument
+- **WHEN** an older script calls `playMovie(movie, 0.1)`
+- **THEN** the value is treated as a true `isBlocking`, so the call blocks and the movie plays at 16 frames per second
+
+#### Scenario: Old blocking keyword is gone
+- **WHEN** a script calls `playMovie(movie, block=True)`
+- **THEN** Python raises a `TypeError` for the unexpected keyword and no window opens
+
+#### Scenario: Blocking setters are gone
+- **WHEN** a script that used `from mediaCompMovie import *` refers to `setPlayBlocking` or `getPlayBlocking`
+- **THEN** Python raises a `NameError`
 
 #### Scenario: Several movies at once
-- **WHEN** a script calls `playMovie(a, block=False)` and then `playMovie(b, block=False)`
+- **WHEN** a script calls `playMovie(a)` and then `playMovie(b)`
 - **THEN** two playback windows are open and playing at the same time
 
 ### Requirement: Frames reflect the movie at the time of the call
 The playback window SHALL show the movie's frames as they were when `playMovie` was called. Changes to the movie after the call SHALL NOT affect a window that is already playing.
 
 #### Scenario: Movie changed during non-blocking playback
-- **WHEN** a script calls `playMovie(movie, block=False)` and then adds frames to `movie`
+- **WHEN** a script calls `playMovie(movie)` and then adds frames to `movie`
 - **THEN** the open window keeps playing the frames the movie had at the time of the call
 
 ### Requirement: Mixed frame sizes in playback

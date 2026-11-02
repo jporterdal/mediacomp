@@ -108,4 +108,4 @@
   Verify that `grep -nE 'block=|setPlayBlocking|getPlayBlocking|framesPerSec=|playMovie\(movie, 0' contrib/movie/README.md` prints nothing.
 - [x] 5.2 Run the full portable suite, `venv/bin/pytest`, and confirm that everything passes. Then rebuild both handouts from a clean state and confirm that `git status` shows only the intended files changed: no edits under `Documentation/` or `src/`.
 - [x] 5.3 Ask the instructor for the footer's author and license line. Put it in the front matter, rebuild, and verify that the build no longer warns about the placeholder and that `pdftotext` shows the new footer on every page.
-- [ ] 5.4 Re-run the changed rows of `tests/windows/MANUAL_CHECKLIST.md` on Windows with Thonny, at least 2.x and 3.x with the new signature. Record the results the same way as for add-movie-support. Verify that each changed row is marked pass or has a noted issue.
+- [x] 5.4 Re-run the changed rows of `tests/windows/MANUAL_CHECKLIST.md` on Windows with Thonny, at least 2.x and 3.x with the new signature. Record the results the same way as for add-movie-support. Verify that each changed row is marked pass or has a noted issue.

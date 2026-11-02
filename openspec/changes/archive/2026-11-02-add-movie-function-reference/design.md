@@ -195,7 +195,9 @@ Rollback is a revert of those commits. No persistent state or student data is in
 
 ## Open Questions
 
-- **The footer's author and license line.** The instructor decides this before the handout goes to students. It is one field in the source's front matter; until then it holds a clearly marked placeholder that the build prints a warning about.
+None. The one question was resolved in task 5.3:
+
+- The footer's author and license line: the instructor chose `This work © 2026 by Jeremy Porter is licensed under CC BY-NC-SA 4.0.` It is the `footer` field in the source's front matter, so the build no longer warns about a placeholder, and the line appears on every page of the PDF.
 
 ## Future Work (recorded, not in this change)
 
