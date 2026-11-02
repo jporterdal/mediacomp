@@ -49,13 +49,13 @@ def _waitUntilGone(pid, timeout=15):
 
 
 def test_create_no_window_is_passed(popen_calls):
-    mm.playMovie(_movie(), block=False)
+    mm.playMovie(_movie())
     flags = popen_calls[-1]["kwargs"].get("creationflags", 0)
     assert flags & subprocess.CREATE_NO_WINDOW
 
 
 def test_player_exits_when_parent_closes_stdin(popen_calls):
-    mm.playMovie(_movie(), block=False)
+    mm.playMovie(_movie())
     proc = popen_calls[-1]["proc"]
     time.sleep(1.5)
     assert proc.poll() is None
@@ -73,7 +73,7 @@ def test_player_exits_when_parent_is_killed(tmp_path):
         import mediaCompMovie as mm
         movie = mm.makeMovie()
         mm.addFrameToMovie(makeEmptyPicture(16, 12), movie)
-        mm.playMovie(movie, block=False)
+        mm.playMovie(movie)
         print(mm._players[-1].pid, flush=True)
         time.sleep(120)
     """ % os.path.dirname(os.path.abspath(mm.__file__))))

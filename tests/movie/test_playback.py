@@ -25,7 +25,6 @@ def player_state(tmp_path, monkeypatch):
     for proc in list(mm._players):
         mm._stopPlayer(proc)
     mm._players.clear()
-    mm.DEFAULT_PLAY_BLOCKING = True
 
 
 def _movie(count=3):
@@ -45,31 +44,31 @@ def _leftoverTempdirs(tempRoot):
 
 # validation -------------------------------------------------------------
 
-@pytest.mark.parametrize("args, kwargs", [
-    (("frames",), {}),
-    ((None,), {}),
-    (("EMPTY",), {}),
-    (("EMPTYDIR",), {}),
-    (("MOVIE", 0.1), {"framesPerSec": 30}),
-    (("MOVIE", 0), {}),
-    (("MOVIE", -1), {}),
-    (("MOVIE", "fast"), {}),
-    (("MOVIE", True), {}),
-    (("MOVIE", float("inf")), {}),
-    (("MOVIE",), {"framesPerSec": -5}),
-    (("MOVIE",), {"framesPerSec": 0}),
-    (("MOVIE",), {"block": "yes"}),
-])
-def test_invalid_input_starts_nothing(tmp_path, capsys, popen_calls, player_state,
-                                      args, kwargs):
-    stand = {"EMPTY": mm.makeMovie(), "MOVIE": _movie(),
-             "EMPTYDIR": mm.makeMovie(str(tmp_path))}
-    args = tuple(stand.get(a, a) if isinstance(a, str) else a for a in args)
+@pytest.mark.parametrize("arg", ["frames", None, "EMPTY", "EMPTYDIR"])
+def test_invalid_input_starts_nothing(tmp_path, capsys, popen_calls, player_state, arg):
+    stand = {"EMPTY": mm.makeMovie(), "EMPTYDIR": mm.makeMovie(str(tmp_path))}
     with pytest.raises(ValueError):
-        mm.playMovie(*args, **kwargs)
-    assert capsys.readouterr().out.startswith("playMovie(")
+        mm.playMovie(stand.get(arg, arg))
+    assert capsys.readouterr().out.startswith("playMovie(movie[, isBlocking]): ")
     assert popen_calls == []
     assert _leftoverTempdirs(player_state) == []
+
+
+@pytest.mark.parametrize("keyword", ["framesPerSec", "delay", "block"])
+def test_old_keywords_are_rejected(popen_calls, player_state, keyword):
+    with pytest.raises(TypeError, match=keyword):
+        mm.playMovie(_movie(), **{keyword: 1})
+    assert popen_calls == []
+    assert _leftoverTempdirs(player_state) == []
+
+
+def test_play_blocking_setters_are_gone_after_star_import():
+    namespace = {}
+    exec("from mediaCompMovie import *", namespace)
+    for name in ("setPlayBlocking", "getPlayBlocking"):
+        assert name not in namespace
+        assert not hasattr(mm, name)
+    assert not hasattr(mm, "DEFAULT_PLAY_BLOCKING")
 
 
 # the player subprocess --------------------------------------------------
@@ -78,12 +77,14 @@ def test_invalid_input_starts_nothing(tmp_path, capsys, popen_calls, player_stat
 def test_non_blocking_player_exits_when_stdin_closes(popen_calls):
     movie = _movie(3)
     start = time.monotonic()
-    mm.playMovie(movie, block=False)
+    mm.playMovie(movie)
     assert time.monotonic() - start < 5
     call = popen_calls[-1]
     proc = call["proc"]
     assert proc in mm._players
     assert call["args"][-2] == "--play"
+    with open(call["args"][-1]) as f:
+        assert json.load(f)["fps"] == 16
 
     # The window plays the frames the movie had when playMovie was called.
     mm.addFrameToMovie(makeEmptyPicture(16, 12), movie)
@@ -99,26 +100,37 @@ def test_non_blocking_player_exits_when_stdin_closes(popen_calls):
 
 @pytest.mark.usefixtures("headless_sdl")
 def test_two_non_blocking_players_at_once(popen_calls):
-    mm.playMovie(_movie(), block=False)
-    mm.playMovie(_movie(), block=False)
+    mm.playMovie(_movie())
+    mm.playMovie(_movie())
     time.sleep(1.0)
     assert len(mm._players) == 2
     assert all(call["proc"].poll() is None for call in popen_calls)
 
 
+@pytest.mark.parametrize("isBlocking", [True, 1, 0.1])
 @pytest.mark.usefixtures("headless_sdl")
-def test_blocking_call_returns_when_player_stops(popen_calls, player_state):
+def test_blocking_call_returns_when_player_stops(popen_calls, player_state, isBlocking):
     timer = threading.Timer(1.5, lambda: popen_calls[-1]["proc"].stdin.close())
     timer.start()
     start = time.monotonic()
     try:
-        mm.playMovie(_movie(), 0.25)
+        mm.playMovie(_movie(), isBlocking)
     finally:
         timer.cancel()
     assert time.monotonic() - start >= 1.4
     assert popen_calls[-1]["proc"].returncode == 0
     assert popen_calls[-1]["proc"] not in mm._players
     assert _leftoverTempdirs(player_state) == []
+
+
+@pytest.mark.parametrize("isBlocking", [False, 0, None])
+@pytest.mark.usefixtures("headless_sdl")
+def test_false_value_does_not_block(popen_calls, isBlocking):
+    start = time.monotonic()
+    mm.playMovie(_movie(), isBlocking)
+    assert time.monotonic() - start < 5
+    assert popen_calls[-1]["proc"] in mm._players
+    assert popen_calls[-1]["proc"].poll() is None
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="uses SIGTERM, which SDL turns into a quit")
@@ -149,48 +161,3 @@ def test_player_closed_while_parent_alive_exits_cleanly(tmp_path):
     assert err.decode() == ""
     assert proc.returncode == 0
     assert not tempdir.exists()
-
-
-# blocking default -------------------------------------------------------
-
-def test_set_and_get_play_blocking_after_star_import():
-    namespace = {}
-    exec("from mediaCompMovie import *\n"
-         "before = getPlayBlocking()\n"
-         "setPlayBlocking(False)\n"
-         "after = getPlayBlocking()\n", namespace)
-    assert namespace["before"] is True
-    assert namespace["after"] is False
-    assert mm.DEFAULT_PLAY_BLOCKING is False
-
-
-@pytest.mark.parametrize("value", [1, 0, "yes", None])
-def test_set_play_blocking_rejects_non_bool(capsys, value):
-    with pytest.raises(ValueError):
-        mm.setPlayBlocking(value)
-    assert capsys.readouterr().out.startswith("setPlayBlocking(")
-    assert mm.getPlayBlocking() is True
-
-
-@pytest.mark.usefixtures("headless_sdl")
-def test_module_default_non_blocking(popen_calls):
-    mm.setPlayBlocking(False)
-    start = time.monotonic()
-    mm.playMovie(_movie())
-    assert time.monotonic() - start < 5
-    assert popen_calls[-1]["proc"] in mm._players
-    assert popen_calls[-1]["proc"].poll() is None
-
-
-@pytest.mark.usefixtures("headless_sdl")
-def test_block_keyword_overrides_default(popen_calls):
-    mm.setPlayBlocking(False)
-    timer = threading.Timer(1.5, lambda: popen_calls[-1]["proc"].stdin.close())
-    timer.start()
-    start = time.monotonic()
-    try:
-        mm.playMovie(_movie(), block=True)
-    finally:
-        timer.cancel()
-    assert time.monotonic() - start >= 1.4
-    assert popen_calls[-1]["proc"].returncode == 0

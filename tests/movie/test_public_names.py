@@ -4,7 +4,7 @@ import mediaCompMovie as mm
 
 EXPECTED = {
     "makeMovie", "makeMovieFromInitialFile", "addFrameToMovie", "writeFrame",
-    "writeFramesToDirectory", "playMovie", "setPlayBlocking", "getPlayBlocking",
+    "writeFramesToDirectory", "playMovie",
     "writeMovie", "writeMP4", "writeAVI", "writeQuicktime",
     "setMovieFormat", "getMovieFormat",
 }

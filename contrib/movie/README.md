@@ -3,6 +3,9 @@
 `mediaCompMovie.py` adds movies to mediaComp: you can build an animation
 frame by frame, play it in a window, and save it as a video file.
 
+**Movie Functions.pdf**, next to `mediaCompMovie.py`, describes every movie
+function with an example. This page shows how to get started.
+
 ## Setting up (Windows and Thonny)
 
 1. In Thonny, open **Tools → Manage packages**, search for `mediaComp`, and
@@ -40,8 +43,8 @@ playMovie(movie)
 ```
 
 `print(movie)` shows `Movie, frames: 29`. `playMovie` opens a window that
-plays the movie over and over until you close it. Your program waits at
-`playMovie` until then.
+plays the movie over and over, 16 frames a second, until you close it. Your
+program carries on while the movie plays.
 
 ## Example: writing frames to a folder
 
@@ -61,10 +64,8 @@ def makeBallFrames(directory):
 
 makeBallFrames("frames")
 movie = makeMovie("frames")
-playMovie(movie, 0.1)
+playMovie(movie)
 ```
-
-`playMovie(movie, 0.1)` shows each frame for 0.1 seconds.
 
 ## The playback window
 
@@ -76,9 +77,14 @@ playMovie(movie, 0.1)
 
 The title shows which frame is on screen, for example `Movie: frame 3 of 29`.
 
-To let your program carry on while the movie plays, use
-`playMovie(movie, block=False)`, or call `setPlayBlocking(False)` once at
-the start. The window closes when you press Stop in Thonny.
+Your program carries on while the movie plays, and the window closes when
+you press Stop in Thonny. To make your program wait until the window is
+closed, use `playMovie(movie, True)`. Do that to watch several movies one
+after another, or when you run your program outside Thonny: there, the
+window closes as soon as your program ends.
+
+Movies always play at 16 frames per second. To choose a speed, save the
+movie as a video file with the speed you want (see below).
 
 ## Where files go
 
@@ -113,32 +119,37 @@ be the same size to save it as a video.
 
 ## Function reference
 
-| Function | What it does |
-|---|---|
-| `makeMovie()` | Makes a new, empty movie. |
-| `makeMovie(directory)` | Makes a movie whose frames are the images in `directory`, in number order, at the time it is played or saved. |
-| `makeMovieFromInitialFile(filename)` | Makes a movie from numbered files such as `frame0001.png`, `frame0002.png`… Give the first one. |
-| `addFrameToMovie(frame, movie)` | Adds a picture, or the name of an image file, as the last frame. The picture is copied as it looks now. |
-| `writeFrame(num, directory, picture)` | Saves `picture` as `frame0001.png` (for `num` 1) in `directory`, making the folder if needed. |
-| `writeFramesToDirectory(movie, directory)` | Saves every frame as `frame0001.png`, `frame0002.png`… in `directory` (the current folder if left out). |
-| `playMovie(movie)` | Plays the movie in a window at 16 frames per second. |
-| `playMovie(movie, delay)` | Shows each frame for `delay` seconds. |
-| `playMovie(movie, framesPerSec=n)` | Plays at `n` frames per second. |
-| `playMovie(movie, block=False)` | Plays without making your program wait. |
-| `setPlayBlocking(flag)` / `getPlayBlocking()` | Sets or tells whether `playMovie` waits (`True` to start with). |
-| `writeMP4(movie, path, framesPerSec)` | Saves an MP4 video. `framesPerSec` is optional (16). |
-| `writeAVI(movie, path, framesPerSec)` | Saves an AVI video. |
-| `writeQuicktime(movie, path, framesPerSec)` | Saves a QuickTime (`.mov`) video. |
-| `writeMovie(movie, path, framesPerSec)` | Saves a video in the format of the path's extension. |
-| `setMovieFormat(fmt)` / `getMovieFormat()` | Sets or tells the format `writeMovie` uses when the path has no extension: `"mp4"` (to start with), `"avi"` or `"mov"`. |
+See **Movie Functions.pdf** for what each function does, its inputs, and an
+example. Inputs in `[ ]` are optional.
 
-## Things to watch out for
+- `addFrameToMovie(frame, movie)`
+- `getMovieFormat()`
+- `makeMovie([directory])`
+- `makeMovieFromInitialFile(filename)`
+- `playMovie(movie[, isBlocking])`
+- `setMovieFormat(fmt)`
+- `writeAVI(movie, path[, framesPerSec])`
+- `writeFrame(num, directory, picture)`
+- `writeFramesToDirectory(movie[, directory])`
+- `writeMovie(movie, path[, framesPerSec])`
+- `writeMP4(movie, path[, framesPerSec])`
+- `writeQuicktime(movie, path[, framesPerSec])`
 
-- **Old frame files.** `writeFrame` and `writeFramesToDirectory` replace
-  files with the same names but leave other files alone. If an earlier run
-  wrote 50 frames and this run writes 30, frames 31 to 50 are still in the
-  folder, and `makeMovie(directory)` will include them. Delete the folder, or
-  use a new one, before writing a shorter movie.
-- **Memory.** Every picture you add with `addFrameToMovie` is kept in memory.
-  A 640x480 frame takes about 1 MB, so 100 frames take about 100 MB. For very
-  long movies, use smaller pictures or `writeFrame` to a folder instead.
+The start of the Movie Functions section in the PDF also covers things to
+watch out for: old frame files left in a folder, and memory use.
+
+## Rebuilding the reference (developers)
+
+`Movie Functions.docx` and `Movie Functions.pdf` are generated from
+`docs/movie-functions.md`; edit that file, never the generated ones. In WSL
+or Linux, install the tools once:
+
+```
+sudo apt install libreoffice-writer-nogui python3-uno \
+                 fonts-liberation fonts-crosextra-carlito fonts-crosextra-caladea
+venv/bin/pip install -r contrib/movie/requirements-dev.txt
+```
+
+Then, from the repository root, run `venv/bin/python contrib/movie/docs/build.py`
+(add `--no-pdf` to skip LibreOffice). `tests/movie/test_reference_doc.py`
+checks that the source matches the functions in `mediaCompMovie.py`.

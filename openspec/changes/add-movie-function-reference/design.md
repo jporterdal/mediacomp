@@ -178,6 +178,12 @@ venv/bin/pip install -r contrib/movie/requirements-dev.txt     # adds python-doc
 - **UNO automation is fragile.** A leftover `soffice` process or a locked profile can hang the conversion. Mitigation: `docx2pdf.py` starts its own `soffice` with a throw-away `-env:UserInstallation` profile in a new unique temp directory, uses a timeout, and terminates the process on exit. Per the house rules, it leaves the temp directory in place and reports its path.
 - **The template couples the build to upstream's file.** Mitigation: the build checks that the required styles exist and names any missing one.
 - **Three descriptions of each function** (docstring, README list, reference). The drift test covers only the reference's signatures. Mitigation: the README keeps only names and points to the PDF, and docstrings remain the developer view. A docstring check can be added later if they drift.
+- **Differences from upstream's PDF, found by comparing rendered pages (task 4.3).** The build copies upstream's horizontal rule between entries and the rules under the title lines, so the layout, headings, bold parameter labels, header page number and margins match. What still differs, and would need hand restyling for upstream:
+  - **Fonts in the PDF.** LibreOffice substitutes Caladea for Cambria (body), Carlito for Calibri (headings) and Liberation Mono for Courier New (code). The metrics are the same, so line breaks match, but Liberation Mono looks lighter than Courier New. The `.docx` still names upstream's fonts, so Word uses the originals.
+  - **Code in running text.** The reference sets file names, literal values and short calls such as `makeMovie(directory)` in Courier (upstream's `Program code Char` style). Upstream never uses Courier in prose; it writes such text plainly or bolds function names. This is deliberate for students, but upstream may want those runs restyled.
+  - **Example labels.** An entry with two examples gets one "Examples:" label (D5). Upstream is inconsistent: `getMediaFolder` has one "Example:" for two examples, `play` repeats "Example:" before each.
+  - **Title block and footer.** There is no institution line between the subtitle and "Document based on", and the footer is one plain-text line with no hyperlink. Upstream's footer is two lines with a link to the license.
+  - **Table of contents.** LibreOffice builds it, so page numbers can differ from Word's; Word refreshes it on open. The larger type of the Heading 3 lines comes from upstream's own `toc 3` style, which Word renders the same way.
 
 ## Migration Plan
 

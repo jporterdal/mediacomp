@@ -27,7 +27,7 @@ def rectMovie(count=20):
     return movie
 
 movie = rectMovie()
-playMovie(movie)
+playMovie(movie, True)
 print("done")
 ```
 
@@ -57,13 +57,12 @@ Get-ChildItem $env:TEMP -Filter 'mediaCompMovie-*'
 | # | Steps | Expected |
 |---|---|---|
 | 2.1 | Run `check.py` and watch for a few loops. | About 16 frames a second: the 20 frames take a little over 1 second per loop. |
-| 2.2 | Change the call to `playMovie(movie, 0.25)`. | Each frame stays about a quarter of a second (one loop takes about 5 seconds). |
-| 2.3 | Change the call to `playMovie(movie, framesPerSec=4)`. | Same speed as 2.2. |
-| 2.4 | Press space. | Playback stops; the title ends in `(paused)`. |
-| 2.5 | While paused, press right arrow, then left arrow. | One frame forward, then one frame back; the title shows the frame number. |
-| 2.6 | Step back with left arrow until frame 1, then press left once more. | Frame 20 is shown. |
-| 2.7 | Press space again, then Escape. | Playback resumes; Escape closes the window and `done` is printed. |
-| 2.8 | Make a movie with one 200x100 picture and one 300x150 picture and play it. | The window is 300x150; the small frame is centred, not stretched. |
+| 2.2 | Time ten loops with a stopwatch. | Ten loops take about 12½ seconds: 20 frames at 16 frames per second. `playMovie` has no speed setting; the speed is chosen when saving (6.6). |
+| 2.3 | Press space. | Playback stops; the title ends in `(paused)`. |
+| 2.4 | While paused, press right arrow, then left arrow. | One frame forward, then one frame back; the title shows the frame number. |
+| 2.5 | Step back with left arrow until frame 1, then press left once more. | Frame 20 is shown. |
+| 2.6 | Press space again, then Escape. | Playback resumes; Escape closes the window and `done` is printed. |
+| 2.7 | Make a movie with one 200x100 picture and one 300x150 picture and play it. | The window is 300x150; the small frame is centred, not stretched. |
 
 ## 3. Clean shutdown
 
@@ -72,18 +71,18 @@ These cover every scenario of the playback "Clean shutdown" requirement.
 | # | Steps | Expected |
 |---|---|---|
 | 3.1 | **Interrupt during blocking playback.** Run `check.py`; while the window is playing, click Thonny's **Stop** button (or press Ctrl+C in the shell). | The window closes. The shell shows `KeyboardInterrupt` (or the backend restarts) and `done` is not printed. The process list is empty. |
-| 3.2 | **Stop/Restart with a non-blocking window.** Change the call to `playMovie(movie, block=False)` and run. | `done` is printed while the window keeps playing. |
+| 3.2 | **Stop/Restart with a non-blocking window.** Change the call to `playMovie(movie)` and run. | `done` is printed while the window keeps playing. |
 | 3.3 | With that window still open, click **Stop** (Stop/Restart backend). | The window closes within a couple of seconds. The process list is empty. |
 | 3.4 | **Re-running with a window open.** Run the non-blocking script again, and while its window is open, press **F5** (run again). | The old window closes when Thonny restarts the backend, and one new window opens. The process list shows exactly one player. |
 | 3.5 | **Script ends normally.** Add `import time; time.sleep(3)` after `print("done")` in the non-blocking script and run it. | Thonny keeps its backend running after the script ends, so the window stays open (playing) until you click **Stop**, which closes it. This is correct: the window lives as long as the Python process that started it. |
-| 3.6 | **Temporary frames cleaned up.** Close every player window (click **Stop** in Thonny), then in PowerShell run `Get-ChildItem $env:TEMP -Filter 'mediaCompMovie-*'`. Leftovers from earlier checks build up in that folder, so one empty result at this point covers 1.3, 2.7, 3.1, 3.3 and 3.4. | The command prints nothing. If folders are listed, delete them, then repeat those checks one at a time and run the command after each one to find which check leaves them. |
-| 3.7 | Run two players at once: `playMovie(movie, block=False)` twice. | Two windows play at the same time. Stop closes both. |
+| 3.6 | **Temporary frames cleaned up.** Close every player window (click **Stop** in Thonny), then in PowerShell run `Get-ChildItem $env:TEMP -Filter 'mediaCompMovie-*'`. Leftovers from earlier checks build up in that folder, so one empty result at this point covers 1.3, 2.6, 3.1, 3.3 and 3.4. | The command prints nothing. If folders are listed, delete them, then repeat those checks one at a time and run the command after each one to find which check leaves them. |
+| 3.7 | Run two players at once: `playMovie(movie)` twice. | Two windows play at the same time. Stop closes both. |
 
 ## 4. `show()` and `playMovie` together
 
 | # | Steps | Expected |
 |---|---|---|
-| 4.1 | Before `playMovie(movie)`, add `show(makeEmptyPicture(100, 100, blue))`. | The picture window and the movie window both open and work. Closing the movie window returns; the picture window stays usable. |
+| 4.1 | Before `playMovie(movie, True)`, add `show(makeEmptyPicture(100, 100, blue))`. | The picture window and the movie window both open and work. Closing the movie window returns; the picture window stays usable. |
 
 ## 5. Textbook and Guzdial-style scripts
 
@@ -106,7 +105,8 @@ Install `imageio` and `imageio-ffmpeg` with **Tools → Manage packages**
 | 6.2 | **Playable in Windows' built-in player.** Open each file by double-clicking it (Media Player on Windows 11, Movies & TV on Windows 10). Do not install any codecs. | Each one plays and shows frames 1–20 in order (the rectangle moves down-right, the frame number counts up). Record the AVI result for design.md's AVI codec open question. |
 | 6.3 | Export again with `writeMP4(movie, "anim30.mp4", 30)` and open it. | Plays noticeably faster than `anim.mp4`. |
 | 6.4 | Run `writeMovie(movie, "anim2")`. | `anim2.mp4` is created and plays. |
-| 6.5 | Check that `playMovie(movie)` still works with the packages installed. | Same as 1.1. |
+| 6.5 | Check that `playMovie(movie, True)` still works with the packages installed. | Same as 1.1. |
+| 6.6 | Export with `writeMP4(movie, "anim4.mp4", 4)` and open it in the built-in player. | It plays at 4 frames a second: each frame stays about a quarter of a second, and one loop takes about 5 seconds. |
 
 ## 7. Automated Windows tests
 

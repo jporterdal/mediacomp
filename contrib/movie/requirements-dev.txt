@@ -1,3 +1,4 @@
 pytest
 imageio
 imageio-ffmpeg
+python-docx

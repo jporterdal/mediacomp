@@ -32,7 +32,7 @@ import PIL.Image
 
 __all__ = [
     "makeMovie", "makeMovieFromInitialFile", "addFrameToMovie", "writeFrame",
-    "writeFramesToDirectory", "playMovie", "setPlayBlocking", "getPlayBlocking",
+    "writeFramesToDirectory", "playMovie",
     "writeMovie", "writeMP4", "writeAVI", "writeQuicktime",
     "setMovieFormat", "getMovieFormat",
 ]
@@ -259,7 +259,7 @@ def writeFramesToDirectory(movie, directory=None):
     movie.dir = path
 
 
-DEFAULT_PLAY_BLOCKING = True
+PLAYBACK_FPS = 16
 
 # Non-blocking players. Holding the Popen keeps its stdin pipe open; letting
 # it be garbage-collected would close the pipe and stop the player early.
@@ -284,61 +284,20 @@ def _stopPlayer(proc):
         proc.wait()
 
 
-def setPlayBlocking(flag):
+def playMovie(movie, isBlocking=False):
     """
-    Sets whether playMovie waits for its window to be closed (True, the
-    starting setting) or lets your program carry on while the movie plays
-    (False).
-
-    :param flag: True or False
-    """
-    global DEFAULT_PLAY_BLOCKING
-    if not isinstance(flag, bool):
-        _fail("setPlayBlocking(flag)", "Input must be True or False")
-    DEFAULT_PLAY_BLOCKING = flag
-
-
-def getPlayBlocking():
-    """
-    Tells you whether playMovie waits for its window to be closed.
-
-    :return: True or False
-    """
-    return DEFAULT_PLAY_BLOCKING
-
-
-def playMovie(movie, delay=None, framesPerSec=None, block=None):
-    """
-    Plays a movie in a window, over and over, until the window is closed.
-    Space pauses; while paused, the left and right arrows step a frame;
-    Escape closes the window. Plays 16 frames per second unless you give
-    delay or framesPerSec (not both).
+    Plays a movie in a window, over and over, until the window is closed,
+    at 16 frames per second. Space pauses; while paused, the left and right
+    arrows step a frame; Escape closes the window. Your program carries on
+    while the movie plays, unless isBlocking is True.
 
     :param movie: the movie to play
-    :param delay: (optional) seconds to show each frame, for example 0.1
-    :param framesPerSec: (optional) frames per second, for example 30
-    :param block: (optional) True to wait for the window to close, False to
-                  carry on while it plays; the default is set by setPlayBlocking
+    :param isBlocking: (optional) True to wait for the window to be closed;
+                       False if not given
     """
-    signature = "playMovie(movie[, delay][, framesPerSec=n][, block=flag])"
+    signature = "playMovie(movie[, isBlocking])"
     if not isinstance(movie, Movie):
         _fail(signature, "First input is not a movie")
-    if delay is not None and framesPerSec is not None:
-        _fail(signature, "Give either delay or framesPerSec, not both")
-    if delay is not None:
-        if not _isPositiveNumber(delay):
-            _fail(signature, "delay must be a number of seconds greater than 0")
-        fps = 1.0 / delay
-    elif framesPerSec is not None:
-        if not _isPositiveNumber(framesPerSec):
-            _fail(signature, "framesPerSec must be a number greater than 0")
-        fps = framesPerSec
-    else:
-        fps = 16
-    if block is None:
-        block = DEFAULT_PLAY_BLOCKING
-    elif not isinstance(block, bool):
-        _fail(signature, "block must be True or False")
     frames = movie.resolvedFrames()
     if not frames:
         _fail(signature, "Movie has no frames")
@@ -353,7 +312,7 @@ def playMovie(movie, delay=None, framesPerSec=None, block=None):
             paths.append(path)
         manifest = os.path.join(tempdir, "manifest.json")
         with open(manifest, "w") as f:
-            json.dump({"frames": paths, "fps": fps, "tempdir": tempdir}, f)
+            json.dump({"frames": paths, "fps": PLAYBACK_FPS, "tempdir": tempdir}, f)
         options = {}
         if sys.platform == "win32":
             options["creationflags"] = subprocess.CREATE_NO_WINDOW
@@ -366,7 +325,7 @@ def playMovie(movie, delay=None, framesPerSec=None, block=None):
         shutil.rmtree(tempdir, ignore_errors=True)
         raise
 
-    if not block:
+    if not isBlocking:
         for old in [p for p in _players if p.poll() is not None]:
             old.stdin.close()
             _players.remove(old)
